@@ -33,7 +33,7 @@ const CalendarCell = memo<{
   roomCapacity: number;
   canBook: boolean;
   onClick: () => void;
-}>(({ roomId, date, occupancy, roomCapacity, canBook, onClick }) => {
+}>(({ date, occupancy, roomCapacity, canBook, onClick }) => {
 
   const cellColor = useMemo(() => {
     if (!occupancy) return 'bg-white';
@@ -89,7 +89,6 @@ CalendarCell.displayName = 'CalendarCell';
 export const OccupancyCalendar: React.FC<OccupancyCalendarProps> = ({
   locations,
   bookings,
-  customers = [],
   onBookingCreated
 }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());

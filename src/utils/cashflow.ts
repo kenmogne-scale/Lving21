@@ -1,5 +1,5 @@
 import { Booking } from '../types';
-import { eachDayOfInterval, isWithinInterval, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addMonths, subMonths, format } from 'date-fns';
+import { eachDayOfInterval, isWithinInterval, startOfWeek, format } from 'date-fns';
 
 export interface DailyCashflow {
   date: Date;
@@ -24,7 +24,7 @@ export function calculateDailyCashflows(
   endDate: Date
 ): DailyCashflow[] {
   const dates = eachDayOfInterval({ start: startDate, end: endDate });
-  
+
   return dates.map(date => {
     const activeBookings = bookings.filter(booking =>
       isWithinInterval(date, {
@@ -55,17 +55,17 @@ export function calculateMonthlyCashflows(
   endDate: Date
 ): Map<string, CashflowSummary> {
   const monthlyData = new Map<string, { revenues: number[]; bookings: Booking[] }>();
-  
+
   // Filtere nur Buchungen, die sich mit dem Zeitraum überschneiden
   const relevantBookings = bookings.filter(booking => {
     return booking.startDate <= endDate && booking.endDate >= startDate;
   });
-  
+
   relevantBookings.forEach(booking => {
     // Bestimme den tatsächlichen Überlappungszeitraum
     const overlapStart = booking.startDate > startDate ? booking.startDate : startDate;
     const overlapEnd = booking.endDate < endDate ? booking.endDate : endDate;
-    
+
     const bookingDates = eachDayOfInterval({
       start: overlapStart,
       end: overlapEnd
@@ -76,7 +76,7 @@ export function calculateMonthlyCashflows(
       if (!monthlyData.has(monthKey)) {
         monthlyData.set(monthKey, { revenues: [], bookings: [] });
       }
-      
+
       const data = monthlyData.get(monthKey)!;
       const dailyRevenue = booking.bedCount * booking.pricePerBedPerNight;
       data.revenues.push(dailyRevenue);
@@ -114,17 +114,17 @@ export function calculateWeeklyCashflows(
   endDate: Date
 ): Map<string, CashflowSummary> {
   const weeklyData = new Map<string, { revenues: number[]; bookings: Booking[] }>();
-  
+
   // Filtere nur Buchungen, die sich mit dem Zeitraum überschneiden
   const relevantBookings = bookings.filter(booking => {
     return booking.startDate <= endDate && booking.endDate >= startDate;
   });
-  
+
   relevantBookings.forEach(booking => {
     // Bestimme den tatsächlichen Überlappungszeitraum
     const overlapStart = booking.startDate > startDate ? booking.startDate : startDate;
     const overlapEnd = booking.endDate < endDate ? booking.endDate : endDate;
-    
+
     const bookingDates = eachDayOfInterval({
       start: overlapStart,
       end: overlapEnd
@@ -133,11 +133,11 @@ export function calculateWeeklyCashflows(
     bookingDates.forEach(date => {
       const weekStart = startOfWeek(date, { weekStartsOn: 1 });
       const weekKey = format(weekStart, 'yyyy-MM-dd');
-      
+
       if (!weeklyData.has(weekKey)) {
         weeklyData.set(weekKey, { revenues: [], bookings: [] });
       }
-      
+
       const data = weeklyData.get(weekKey)!;
       const dailyRevenue = booking.bedCount * booking.pricePerBedPerNight;
       data.revenues.push(dailyRevenue);
@@ -175,7 +175,7 @@ export function calculateCashflowSummary(
   endDate: Date
 ): CashflowSummary {
   const dailyCashflows = calculateDailyCashflows(bookings, startDate, endDate);
-  
+
   const revenues = dailyCashflows.map(cf => cf.revenue);
   const total = revenues.reduce((sum, rev) => sum + rev, 0);
   const average = revenues.length > 0 ? total / revenues.length : 0;

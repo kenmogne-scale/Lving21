@@ -186,7 +186,7 @@ function findOptimalRoomCombination(
 
   // Strategie 2: Versuche eine effizientere Kombination zu finden
   // Sortiere aufsteigend für "fill-up" Strategie
-  const roomsAscending = [...availableRooms].sort((a, b) => a.capacity - b.capacity);
+
 
   // Brute-Force für kleine Anzahl von WEs (bis 15)
   if (availableRooms.length <= 15) {

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Location, Booking, Room } from '../types';
 import { calculateLocationOccupancy, calculateOccupancyForPeriod } from '../utils/occupancy';
-import { eachDayOfInterval, startOfMonth, endOfMonth } from 'date-fns';
+import { startOfMonth, endOfMonth } from 'date-fns';
 
 export function useOccupancy(locations: Location[], bookings: Booking[], currentDate: Date = new Date()) {
   const [selectedDate, setSelectedDate] = useState(currentDate);

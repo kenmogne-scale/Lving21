@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Customer, Invoice, Booking, Location } from '../../types';
+import { Customer, Booking, Location } from '../../types';
 import { Button } from '../ui/Button';
 import { Plus, Search, User, FileText, ArrowLeft, Building2, MapPin, Mail, Phone } from 'lucide-react';
 import { CustomerForm } from '../CustomerForm';
@@ -22,7 +22,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     customers,
     locations,
     onSaveCustomer,
-    onDeleteCustomer,
+
     onBookingStatusChange,
     onCancelBooking
 }) => {
@@ -37,15 +37,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
         setSelectedCustomer(null);
     };
 
-    const handleDeleteCustomer = (id: string) => {
-        if (window.confirm('Kunde wirklich löschen?')) {
-            onDeleteCustomer(id);
-            if (selectedCustomer?.id === id) {
-                setViewMode('list');
-                setSelectedCustomer(null);
-            }
-        }
-    };
+
 
     const filteredCustomers = customers.filter(c =>
         c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

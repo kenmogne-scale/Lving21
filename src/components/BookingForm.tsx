@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, X } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Label } from './ui/Label';
@@ -254,8 +254,8 @@ export const BookingForm: React.FC<BookingFormProps> = ({
                 <h4 className="font-semibold">Vorgeschlagene Zuweisung:</h4>
                 <span
                   className={`rounded-full px-3 py-1 text-sm font-medium ${suggestions.available
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-red-100 text-red-800'
                     }`}
                 >
                   {suggestions.available ? 'Verfügbar' : 'Nicht vollständig verfügbar'}
