@@ -640,6 +640,7 @@ export const mockInvoices: import('../types').Invoice[] = [
     vatAmount: 47.50,
     status: 'paid',
     paidDate: new Date('2026-02-12'),
+    created_at: new Date('2026-02-01'),
     items: [
       {
         pos: 1,
@@ -669,6 +670,7 @@ export const mockInvoices: import('../types').Invoice[] = [
     netAmount: 2636.14,
     vatAmount: 498.86,
     status: 'sent',
+    created_at: new Date('2026-02-25'),
     items: [
       {
         pos: 1,
@@ -697,6 +699,7 @@ export const mockInvoices: import('../types').Invoice[] = [
     netAmount: 1500.00,
     vatAmount: 285.00,
     status: 'overdue',
+    created_at: new Date('2025-12-15'),
     items: [
       {
         pos: 1,
@@ -726,6 +729,7 @@ export const mockInvoices: import('../types').Invoice[] = [
     vatAmount: 152.00,
     status: 'paid',
     paidDate: new Date('2026-01-20'),
+    created_at: new Date('2026-01-10'),
     items: [
       {
         pos: 1,

@@ -85,7 +85,8 @@ export function createInvoiceFromBooking(
         netAmount: netTotal,
         vatAmount: vatAmount,
         status: status,
-        items: items
+        items: items,
+        created_at: new Date()
     };
 
     return invoice;
