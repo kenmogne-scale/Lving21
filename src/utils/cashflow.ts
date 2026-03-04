@@ -23,6 +23,11 @@ export function calculateDailyCashflows(
   startDate: Date,
   endDate: Date
 ): DailyCashflow[] {
+  // Validierung: Wenn Startdatum nach Enddatum liegt, gib leeres Array zurück
+  if (!startDate || !endDate || startDate > endDate) {
+    return [];
+  }
+
   const dates = eachDayOfInterval({ start: startDate, end: endDate });
 
   return dates.map(date => {
@@ -65,6 +70,9 @@ export function calculateMonthlyCashflows(
     // Bestimme den tatsächlichen Überlappungszeitraum
     const overlapStart = booking.startDate > startDate ? booking.startDate : startDate;
     const overlapEnd = booking.endDate < endDate ? booking.endDate : endDate;
+
+    // Validierung: Überspringe wenn ungültiger Bereich
+    if (overlapStart > overlapEnd) return;
 
     const bookingDates = eachDayOfInterval({
       start: overlapStart,
@@ -124,6 +132,9 @@ export function calculateWeeklyCashflows(
     // Bestimme den tatsächlichen Überlappungszeitraum
     const overlapStart = booking.startDate > startDate ? booking.startDate : startDate;
     const overlapEnd = booking.endDate < endDate ? booking.endDate : endDate;
+
+    // Validierung: Überspringe wenn ungültiger Bereich
+    if (overlapStart > overlapEnd) return;
 
     const bookingDates = eachDayOfInterval({
       start: overlapStart,

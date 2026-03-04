@@ -20,12 +20,15 @@ export function isRoomBookedOnDate(
 
     // Prüfe ob das Datum innerhalb des Buchungszeitraums liegt
     // Nutze startOfDay für robusten Vergleich (ignoriere Uhrzeit)
+    // WICHTIG: Der Check-out Tag (endDate) gilt NICHT als belegt!
+    // Beispiel: Buchung 01.01-02.01 -> nur 01.01 ist belegt, am 02.01 kann neu eingecheckt werden
     const checkDate = startOfDay(date);
     const bookingStart = startOfDay(new Date(booking.startDate));
     const bookingEnd = startOfDay(new Date(booking.endDate));
 
+    // checkDate >= bookingStart UND checkDate < bookingEnd (NICHT <=)
     return (isAfter(checkDate, bookingStart) || isSameDay(checkDate, bookingStart)) &&
-      (isBefore(checkDate, bookingEnd) || isSameDay(checkDate, bookingEnd));
+      isBefore(checkDate, bookingEnd);
   });
 }
 
@@ -39,6 +42,11 @@ export function getAvailableBedsForRoom(
   endDate: Date,
   bookings: Booking[]
 ): number {
+  // Validierung: Wenn Startdatum nach Enddatum liegt, gib volle Kapazität zurück
+  if (!startDate || !endDate || startDate > endDate) {
+    return room.capacity;
+  }
+
   const activeBookings = bookings.filter(b => b.status !== 'cancelled');
   const dates = eachDayOfInterval({ start: startDate, end: endDate });
 
@@ -69,8 +77,10 @@ export function calculateRoomOccupancy(
     const bookingStart = startOfDay(new Date(booking.startDate));
     const bookingEnd = startOfDay(new Date(booking.endDate));
 
+    // WICHTIG: Der Check-out Tag (endDate) gilt NICHT als belegt!
+    // checkDate >= bookingStart UND checkDate < bookingEnd (NICHT <=)
     return (isAfter(checkDate, bookingStart) || isSameDay(checkDate, bookingStart)) &&
-      (isBefore(checkDate, bookingEnd) || isSameDay(checkDate, bookingEnd));
+      isBefore(checkDate, bookingEnd);
   });
 
   return {
@@ -92,6 +102,11 @@ export function calculateOccupancyForPeriod(
   endDate: Date,
   bookings: Booking[]
 ): Map<string, OccupancyData[]> {
+  // Validierung: Wenn Startdatum nach Enddatum liegt, gib leere Map zurück
+  if (!startDate || !endDate || startDate > endDate) {
+    return new Map<string, OccupancyData[]>();
+  }
+
   const dates = eachDayOfInterval({ start: startDate, end: endDate });
   const occupancyMap = new Map<string, OccupancyData[]>();
 
@@ -120,6 +135,18 @@ export function checkAvailability(
   endDate: Date,
   bookings: Booking[]
 ): AvailabilityCheck {
+  // Validierung: Wenn Startdatum nach Enddatum liegt, gib "nicht verfügbar" zurück
+  if (!startDate || !endDate || startDate > endDate) {
+    return {
+      locationId: '',
+      bedCount: bedsNeeded,
+      startDate,
+      endDate,
+      available: false,
+      suggestions: []
+    };
+  }
+
   const activeBookings = bookings.filter(b => b.status !== 'cancelled');
   const dates = eachDayOfInterval({ start: startDate, end: endDate });
 
@@ -294,8 +321,19 @@ export function calculateAverageOccupancyForPeriod(
   endDate: Date,
   bookings: Booking[]
 ): { averageOccupied: number; averageAvailable: number; averagePercentage: number; totalCapacity: number } {
-  const dates = eachDayOfInterval({ start: startDate, end: endDate });
   const totalCapacity = rooms.reduce((sum, room) => sum + room.capacity, 0);
+
+  // Validierung: Wenn Startdatum nach Enddatum liegt, gib Standardwerte zurück
+  if (!startDate || !endDate || startDate > endDate) {
+    return {
+      averageOccupied: 0,
+      averageAvailable: totalCapacity,
+      averagePercentage: 0,
+      totalCapacity
+    };
+  }
+
+  const dates = eachDayOfInterval({ start: startDate, end: endDate });
 
   if (dates.length === 0) {
     return {

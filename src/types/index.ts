@@ -113,6 +113,9 @@ export interface Invoice {
   vatAmount: number; // Total VAT
   status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
   items: InvoiceItem[];
+  pdfPath?: string;
+  created_at: Date;
+  updated_at?: Date;
 }
 
 export interface InvoiceItem {

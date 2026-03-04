@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Customer, Booking, Location } from '../../types';
 import { Button } from '../ui/Button';
-import { Plus, Search, User, FileText, ArrowLeft, Building2, MapPin, Mail, Phone } from 'lucide-react';
+import { Plus, Search, User, FileText, ArrowLeft, Building2, MapPin, Mail, Phone, Trash2 } from 'lucide-react';
 import { CustomerForm } from '../CustomerForm';
 import { BookingDetailDialog } from '../BookingDetailDialog';
+import { OfferPreview } from '../OfferPreview';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '../ui/Dialog';
 import { format } from 'date-fns';
 
 // Props to receive global state
@@ -15,6 +17,7 @@ interface CustomersViewProps {
     onDeleteCustomer: (id: string) => void;
     onBookingStatusChange: (bookingId: string, status: 'reserved' | 'confirmed') => void;
     onCancelBooking: (bookingId: string) => void;
+    onDeleteBooking: (bookingId: string) => void;
 }
 
 export const CustomersView: React.FC<CustomersViewProps> = ({
@@ -22,13 +25,19 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     customers,
     locations,
     onSaveCustomer,
-
+    onDeleteCustomer,
     onBookingStatusChange,
-    onCancelBooking
+    onCancelBooking,
+    onDeleteBooking
 }) => {
+    // ... rest of component
+
+    console.log('CustomersView rendered. onDeleteCustomer defined:', !!onDeleteCustomer);
     const [viewMode, setViewMode] = useState<'list' | 'detail' | 'form'>('list');
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+    const [offerBooking, setOfferBooking] = useState<Booking | null>(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
 
     const handleSaveCustomer = (customer: Customer) => {
@@ -138,8 +147,44 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                                     <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold text-xl">
                                         {selectedCustomer.company ? selectedCustomer.company.charAt(0) : selectedCustomer.name.charAt(0)}
                                     </div>
-                                    <Button variant="outline" size="sm" onClick={() => setViewMode('form')}>Bearbeiten</Button>
+                                    <div className="flex gap-2">
+                                        <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(true)}>
+                                            <Trash2 className="w-4 h-4 text-red-500" />
+                                        </Button>
+                                        <Button variant="outline" size="sm" onClick={() => setViewMode('form')}>Bearbeiten</Button>
+                                    </div>
                                 </div>
+
+                                {/* Delete Confirmation Dialog */}
+                                <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Kunde löschen</DialogTitle>
+                                            <DialogClose onClose={() => setShowDeleteConfirm(false)} />
+                                        </DialogHeader>
+                                        <div className="space-y-4">
+                                            <p className="text-gray-600">
+                                                Möchten Sie den Kunden <strong>{selectedCustomer.company || selectedCustomer.name}</strong> wirklich löschen?
+                                                <br />
+                                                Diese Aktion kann nicht rückgängig gemacht werden.
+                                            </p>
+                                            <div className="flex justify-end gap-3">
+                                                <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>Abbrechen</Button>
+                                                <Button
+                                                    onClick={() => {
+                                                        onDeleteCustomer(selectedCustomer.id);
+                                                        setShowDeleteConfirm(false);
+                                                        setSelectedCustomer(null);
+                                                        setViewMode('list');
+                                                    }}
+                                                    className="bg-red-600 hover:bg-red-700 text-white"
+                                                >
+                                                    Löschen
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </DialogContent>
+                                </Dialog>
 
                                 <h3 className="text-xl font-bold text-gray-900 mb-1">{selectedCustomer.company || selectedCustomer.name}</h3>
                                 {selectedCustomer.company && <p className="text-gray-500 mb-4">{selectedCustomer.name}</p>}
@@ -260,21 +305,24 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                         </div>
                     </div>
                 </div>
-            )}
+            )
+            }
 
-            {viewMode === 'form' && (
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-                    <Button variant="ghost" onClick={() => setViewMode('list')} className="mb-2 pl-0">
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        Abbrechen
-                    </Button>
-                    <CustomerForm
-                        existingCustomer={selectedCustomer}
-                        onSave={handleSaveCustomer}
-                        onCancel={() => setViewMode('list')}
-                    />
-                </div>
-            )}
+            {
+                viewMode === 'form' && (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+                        <Button variant="ghost" onClick={() => setViewMode('list')} className="mb-2 pl-0">
+                            <ArrowLeft className="w-4 h-4 mr-2" />
+                            Abbrechen
+                        </Button>
+                        <CustomerForm
+                            existingCustomer={selectedCustomer}
+                            onSave={handleSaveCustomer}
+                            onCancel={() => setViewMode('list')}
+                        />
+                    </div>
+                )
+            }
             {/* Detail Dialog */}
             <BookingDetailDialog
                 booking={selectedBooking}
@@ -283,8 +331,22 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                 locations={locations}
                 onStatusChange={onBookingStatusChange}
                 onCancel={onCancelBooking}
+                onDelete={onDeleteBooking}
+                onShowOffer={() => setOfferBooking(selectedBooking)}
             />
-        </div>
+
+            {offerBooking && (
+                <OfferPreview
+                    booking={offerBooking}
+                    locations={locations}
+                    open={!!offerBooking}
+                    onOpenChange={(open) => !open && setOfferBooking(null)}
+                    onSendOffer={() => {
+                        alert('Funktion "Senden" ist noch nicht implementiert (Mock)');
+                    }}
+                />
+            )}
+        </div >
     );
 };
 

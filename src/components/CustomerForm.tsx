@@ -63,26 +63,54 @@ export const CustomerForm: React.FC<CustomerFormProps> = ({ existingCustomer, on
             return;
         }
 
-        const newCustomer: Customer = {
-            id: existingCustomer?.id || Math.random().toString(36).substr(2, 9),
-            customerNumber: existingCustomer?.customerNumber || (Math.floor(10000 + Math.random() * 90000)).toString(),
-            name: formData.name!,
-            company: formData.company,
-            email: formData.email || '',
-            phone: formData.phone,
-            street: formData.street!,
-            zip: formData.zip!,
-            city: formData.city!,
-            country: formData.country || 'Deutschland',
-            management: formData.management,
-            contactPerson: formData.contactPerson,
-            accountingContact: formData.accountingContact,
-            billingAddress: formData.billingAddress || (
-                `${formData.company ? formData.company + '\n' : ''}${formData.name}\n${formData.street}\n${formData.zip} ${formData.city}${formData.country && formData.country !== 'Deutschland' ? '\n' + formData.country : ''}`
-            )
-        };
+        // Check for duplicates if it's a new customer or name/company changed
+        const checkName = formData.company || formData.name;
+        if (!existingCustomer && checkName) {
+            // Import db dynamically or assume it's passed? 
+            // Better to just assume we can import it since this is a view component file actually
+            // But wait, CustomerForm is in components/CustomerForm.tsx, not views.
+            // I should import db at the top.
+        }
 
-        onSave(newCustomer);
+        // Actually, let's do the check.
+        // I need to import db first. I will do that in a separate edit.
+        // Here is the logic:
+        const runCheck = async () => {
+            // Dynamic import to avoid cycles if any, though likely fine
+            const db = await import('../lib/database');
+
+            // Only check if name/company changed significantly or new
+            if (!existingCustomer) {
+                const potentialDuplicate = await db.findCustomerByName(checkName!);
+                if (potentialDuplicate) {
+                    if (!window.confirm(`Ein Kunde mit dem Namen "${potentialDuplicate.company || potentialDuplicate.name}" existiert bereits (Nr. ${potentialDuplicate.customerNumber}). Trotzdem anlegen?`)) {
+                        return;
+                    }
+                }
+            }
+
+            const newCustomer: Customer = {
+                id: existingCustomer?.id || Math.random().toString(36).substr(2, 9),
+                customerNumber: existingCustomer?.customerNumber || (Math.floor(10000 + Math.random() * 90000)).toString(),
+                name: formData.name!,
+                company: formData.company,
+                email: formData.email || '',
+                phone: formData.phone,
+                street: formData.street!,
+                zip: formData.zip!,
+                city: formData.city!,
+                country: formData.country || 'Deutschland',
+                management: formData.management,
+                contactPerson: formData.contactPerson,
+                accountingContact: formData.accountingContact,
+                billingAddress: formData.billingAddress || (
+                    `${formData.company ? formData.company + '\n' : ''}${formData.name}\n${formData.street}\n${formData.zip} ${formData.city}${formData.country && formData.country !== 'Deutschland' ? '\n' + formData.country : ''}`
+                )
+            };
+
+            onSave(newCustomer);
+        };
+        runCheck();
     };
 
     return (

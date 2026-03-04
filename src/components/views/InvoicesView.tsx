@@ -3,28 +3,38 @@ import { Invoice, Booking } from '../../types';
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Input } from '../ui/Input';
+import * as db from '../../lib/database';
 import {
-    Search, FileText, CheckCircle, Clock, AlertTriangle, XCircle, ArrowLeft, Send
+    Search, FileText, CheckCircle, Clock, AlertTriangle, XCircle, ArrowLeft, Send, Trash2, Calendar, X, ArrowUpDown, ArrowUp, ArrowDown
 } from 'lucide-react';
-import { format, isBefore } from 'date-fns';
+import { format, isBefore, isAfter, parseISO, startOfDay, endOfDay } from 'date-fns';
 
 interface InvoicesViewProps {
     invoices: Invoice[];
     bookings?: Booking[];
     onUpdateInvoice: (invoice: Invoice) => void;
+    onDeleteInvoice: (id: string) => void;
 }
 
 type StatusFilter = 'all' | 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+type SortField = 'invoiceNumber' | 'dueDate' | null;
+type SortDirection = 'asc' | 'desc';
 
 export const InvoicesView: React.FC<InvoicesViewProps> = ({
     invoices,
     bookings = [],
-    onUpdateInvoice
+    onUpdateInvoice,
+    onDeleteInvoice
 }) => {
+    // ... (state remains the same)
     const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
     const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+    const [dueDateFrom, setDueDateFrom] = useState<string>('');
+    const [dueDateTo, setDueDateTo] = useState<string>('');
+    const [sortField, setSortField] = useState<SortField>(null);
+    const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
     // Auto-detect overdue invoices
     const processedInvoices = useMemo(() => {
@@ -39,17 +49,50 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
 
     // Filter invoices
     const filteredInvoices = useMemo(() => {
-        return processedInvoices.filter(inv => {
+        let result = processedInvoices.filter(inv => {
             const matchesSearch =
                 inv.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 inv.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 inv.customerNumber.includes(searchTerm);
             const matchesStatus = statusFilter === 'all' || inv.status === statusFilter;
-            return matchesSearch && matchesStatus;
-        });
-    }, [processedInvoices, searchTerm, statusFilter]);
 
-    // Statistics
+            // Date range filter for due date
+            let matchesDueDate = true;
+            const invDueDate = startOfDay(new Date(inv.dueDate));
+
+            if (dueDateFrom) {
+                const fromDate = startOfDay(parseISO(dueDateFrom));
+                if (isBefore(invDueDate, fromDate)) {
+                    matchesDueDate = false;
+                }
+            }
+            if (dueDateTo) {
+                const toDate = endOfDay(parseISO(dueDateTo));
+                if (isAfter(invDueDate, toDate)) {
+                    matchesDueDate = false;
+                }
+            }
+
+            return matchesSearch && matchesStatus && matchesDueDate;
+        });
+
+        // Apply sorting
+        if (sortField) {
+            result = [...result].sort((a, b) => {
+                let comparison = 0;
+                if (sortField === 'invoiceNumber') {
+                    comparison = a.invoiceNumber.localeCompare(b.invoiceNumber, 'de', { numeric: true });
+                } else if (sortField === 'dueDate') {
+                    comparison = new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+                }
+                return sortDirection === 'asc' ? comparison : -comparison;
+            });
+        }
+
+        return result;
+    }, [processedInvoices, searchTerm, statusFilter, dueDateFrom, dueDateTo, sortField, sortDirection]);
+
+    // Statistics (Same as before)
     const stats = useMemo(() => {
         const total = processedInvoices.length;
         const paid = processedInvoices.filter(i => i.status === 'paid').length;
@@ -64,6 +107,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
         return { total, paid, open, overdue, openAmount, paidAmount };
     }, [processedInvoices]);
 
+    // Helpers (getStatusIcon, getStatusLabel, getStatusColor, handlers...)
     const getStatusIcon = (status: Invoice['status']) => {
         switch (status) {
             case 'paid': return <CheckCircle className="w-4 h-4 text-green-500" />;
@@ -118,6 +162,29 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
         return amount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
     };
 
+    const handleSort = (field: SortField) => {
+        if (sortField === field) {
+            // Toggle direction or clear if already desc
+            if (sortDirection === 'asc') {
+                setSortDirection('desc');
+            } else {
+                setSortField(null);
+            }
+        } else {
+            setSortField(field);
+            setSortDirection('asc');
+        }
+    };
+
+    const getSortIcon = (field: SortField) => {
+        if (sortField !== field) {
+            return <ArrowUpDown className="w-3 h-3 ml-1 opacity-40" />;
+        }
+        return sortDirection === 'asc'
+            ? <ArrowUp className="w-3 h-3 ml-1 text-blue-600" />
+            : <ArrowDown className="w-3 h-3 ml-1 text-blue-600" />;
+    };
+
     const renderListView = () => (
         <div className="space-y-6">
             {/* Header */}
@@ -130,7 +197,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                 </div>
             </div>
 
-            {/* Stats Cards */}
+            {/* Stats Cards (Same as before) */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Card className="p-4 cursor-pointer hover:ring-2 hover:ring-blue-500" onClick={() => setStatusFilter('all')}>
                     <div className="flex items-center gap-3">
@@ -171,8 +238,8 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
             </div>
 
             {/* Search and Filter */}
-            <div className="flex gap-4">
-                <div className="relative flex-1">
+            <div className="flex flex-wrap gap-4">
+                <div className="relative flex-1 min-w-[200px]">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                     <Input
                         placeholder="Suche nach Rechnungsnummer, Kunde..."
@@ -181,6 +248,39 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
+
+                {/* Due Date Range Filter */}
+                <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-500">Fällig:</span>
+                    <input
+                        type="date"
+                        className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+                        value={dueDateFrom}
+                        onChange={(e) => setDueDateFrom(e.target.value)}
+                        placeholder="Von"
+                    />
+                    <span className="text-gray-400">–</span>
+                    <input
+                        type="date"
+                        className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+                        value={dueDateTo}
+                        onChange={(e) => setDueDateTo(e.target.value)}
+                        placeholder="Bis"
+                    />
+                    {(dueDateFrom || dueDateTo) && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => { setDueDateFrom(''); setDueDateTo(''); }}
+                            className="p-1 h-auto"
+                            title="Datumsfilter zurücksetzen"
+                        >
+                            <X className="h-4 w-4 text-gray-400" />
+                        </Button>
+                    )}
+                </div>
+
                 <select
                     className="rounded-md border border-gray-300 px-3 py-2 text-sm"
                     value={statusFilter}
@@ -201,10 +301,26 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nr.</th>
+                                <th
+                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none"
+                                    onClick={() => handleSort('invoiceNumber')}
+                                >
+                                    <span className="flex items-center">
+                                        Nr.
+                                        {getSortIcon('invoiceNumber')}
+                                    </span>
+                                </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kunde</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Datum</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fällig</th>
+                                <th
+                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none"
+                                    onClick={() => handleSort('dueDate')}
+                                >
+                                    <span className="flex items-center">
+                                        Fällig
+                                        {getSortIcon('dueDate')}
+                                    </span>
+                                </th>
                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Betrag</th>
                                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aktionen</th>
@@ -241,24 +357,33 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right" onClick={e => e.stopPropagation()}>
                                         <div className="flex justify-end gap-2">
-                                            {invoice.status === 'draft' && (
+                                            {/* DELETE ACTION */}
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="hover:bg-red-50 text-red-600 hover:text-red-700 hover:border-red-200"
+                                                onClick={() => {
+                                                    console.log('Delete button clicked for invoice:', invoice.id);
+                                                    onDeleteInvoice(invoice.id);
+                                                }}
+                                                title="Löschen"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+
+                                            {/* Existing Actions */}
+                                            {invoice.pdfPath && (
                                                 <Button
-                                                    variant="outline"
+                                                    variant="ghost"
                                                     size="sm"
-                                                    onClick={() => handleSendInvoice(invoice)}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        const url = db.getInvoicePdfUrl(invoice.pdfPath!);
+                                                        window.open(url, '_blank');
+                                                    }}
+                                                    title="PDF anzeigen"
                                                 >
-                                                    <Send className="w-3 h-3 mr-1" />
-                                                    Senden
-                                                </Button>
-                                            )}
-                                            {(invoice.status === 'sent' || invoice.status === 'overdue') && (
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handleMarkAsPaid(invoice)}
-                                                >
-                                                    <CheckCircle className="w-3 h-3 mr-1" />
-                                                    Bezahlt
+                                                    <FileText className="w-4 h-4 text-blue-600" />
                                                 </Button>
                                             )}
                                         </div>
@@ -288,7 +413,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                 </Button>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Invoice Info */}
+                    {/* Invoice Info (Same as before) */}
                     <Card className="md:col-span-2">
                         <CardHeader>
                             <div className="flex justify-between items-start">
@@ -389,14 +514,35 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                                         Als bezahlt markieren
                                     </Button>
                                 )}
-                                <Button variant="outline" className="w-full">
-                                    <FileText className="w-4 h-4 mr-2" />
-                                    PDF anzeigen
+                                {selectedInvoice.pdfPath && (
+                                    <Button variant="outline" className="w-full" onClick={() => {
+                                        const url = db.getInvoicePdfUrl(selectedInvoice.pdfPath!);
+                                        window.open(url, '_blank');
+                                    }}>
+                                        <FileText className="w-4 h-4 mr-2" />
+                                        PDF anzeigen
+                                    </Button>
+                                )}
+
+                                <div className="border-t border-gray-100 my-2 pt-2"></div>
+
+                                <Button
+                                    className="w-full bg-red-100 text-red-700 hover:bg-red-200"
+                                    onClick={() => {
+                                        if (window.confirm('Rechnung wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.')) {
+                                            onDeleteInvoice(selectedInvoice.id);
+                                            setViewMode('list');
+                                            setSelectedInvoice(null);
+                                        }
+                                    }}
+                                >
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Rechnung löschen
                                 </Button>
                             </CardContent>
                         </Card>
 
-                        {/* Linked Booking */}
+                        {/* Linked Booking (Same as before) */}
                         {selectedInvoice.bookingId && (
                             <Card className="border-blue-200 bg-blue-50/50">
                                 <CardHeader>
@@ -412,8 +558,8 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                                                 <div>{new Date(booking.startDate).toLocaleDateString()} – {new Date(booking.endDate).toLocaleDateString()}</div>
                                                 <div>{booking.bedCount} Betten</div>
                                                 <div className={`inline-block px-2 py-0.5 rounded text-xs ${booking.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                                                        booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                                                            'bg-purple-100 text-purple-700'
+                                                    booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                                                        'bg-purple-100 text-purple-700'
                                                     }`}>
                                                     {booking.status === 'confirmed' ? 'Bestätigt' :
                                                         booking.status === 'cancelled' ? 'Storniert' : 'Reserviert'}

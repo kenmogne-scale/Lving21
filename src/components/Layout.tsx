@@ -1,7 +1,7 @@
 import React from 'react';
-import { LayoutDashboard, Calendar, Users, FileText, Menu, Settings, Building, Receipt } from 'lucide-react';
+import { LayoutDashboard, Calendar, Users, FileText, Menu, Settings, Building, Receipt, Upload } from 'lucide-react';
 
-type Tab = 'dashboard' | 'bookings' | 'calendar' | 'customers' | 'invoices' | 'portfolio' | 'admin';
+type Tab = 'dashboard' | 'bookings' | 'calendar' | 'customers' | 'invoices' | 'import' | 'portfolio' | 'admin';
 
 interface LayoutProps {
     activeTab: Tab;
@@ -16,6 +16,7 @@ export const Layout: React.FC<LayoutProps> = ({ activeTab, onTabChange, children
         { id: 'calendar', label: 'Belegungsplan', icon: Calendar },
         { id: 'customers', label: 'Kunden', icon: Users },
         { id: 'invoices', label: 'Rechnungen', icon: Receipt },
+        { id: 'import', label: 'Import', icon: Upload },
         { id: 'portfolio', label: 'Portfolio', icon: Building },
         { id: 'admin', label: 'Admin', icon: Settings },
     ];

@@ -2,6 +2,8 @@ import React from 'react';
 import { Booking, Location } from '../types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from './ui/Dialog';
 
+import { Trash2 } from 'lucide-react'; // Import Icon
+
 interface BookingDetailDialogProps {
     booking: Booking | null;
     open: boolean;
@@ -9,6 +11,8 @@ interface BookingDetailDialogProps {
     locations: Location[];
     onStatusChange: (bookingId: string, status: 'reserved' | 'confirmed') => void;
     onCancel: (bookingId: string) => void;
+    onDelete: (bookingId: string) => void;
+    onShowOffer?: () => void;
 }
 
 export const BookingDetailDialog: React.FC<BookingDetailDialogProps> = ({
@@ -17,8 +21,13 @@ export const BookingDetailDialog: React.FC<BookingDetailDialogProps> = ({
     onOpenChange,
     locations,
     onStatusChange,
-    onCancel
+    onCancel,
+    onDelete,
+    onShowOffer
 }) => {
+    // ...
+
+
     if (!booking) return null;
 
     return (
@@ -111,32 +120,63 @@ export const BookingDetailDialog: React.FC<BookingDetailDialogProps> = ({
                     </div>
 
                     {/* Actions Footer in Modal */}
-                    <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                        {booking.status === 'reserved' && (
-                            <button
-                                onClick={() => {
-                                    if (window.confirm('Zahlungseingang bestätigen und Buchung auf "Bestätigt" setzen?')) {
-                                        onStatusChange(booking.id, 'confirmed');
-                                        onOpenChange(false);
-                                    }
-                                }}
-                                className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded shadow-sm text-sm"
-                            >
-                                Zahlungseingang bestätigen
-                            </button>
-                        )}
+                    <div className="flex justify-between items-center pt-4 border-t border-gray-100">
+                        {/* LEFT SIDE: Delete */}
+                        <button
+                            onClick={() => {
+                                console.log('Delete button clicked for booking:', booking.id);
+                                if (onDelete) {
+                                    onDelete(booking.id);
+                                } else {
+                                    console.error('onDelete prop is undefined!');
+                                    alert('Fehler: Lösch-Funktion nicht verfügbar.');
+                                }
+                                onOpenChange(false);
+                            }}
+                            className="text-red-600 hover:text-red-900 text-sm font-medium flex items-center gap-2 hover:bg-red-50 px-3 py-2 rounded transition-colors"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                            Löschen
+                        </button>
 
-                        {booking.status !== 'cancelled' && (
+                        <div className="flex gap-3">
+                            {/* New Invoice/Offer Button */}
                             <button
                                 onClick={() => {
-                                    onCancel(booking.id);
+                                    onShowOffer && onShowOffer();
                                     onOpenChange(false);
                                 }}
-                                className="text-red-600 hover:text-red-900 text-sm font-medium px-4 py-2"
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded shadow-sm text-sm"
                             >
-                                Buchung stornieren
+                                Rechnung / Angebot öffnen
                             </button>
-                        )}
+
+                            {booking.status === 'reserved' && (
+                                <button
+                                    onClick={() => {
+                                        if (window.confirm('Zahlungseingang bestätigen und Buchung auf "Bestätigt" setzen?')) {
+                                            onStatusChange(booking.id, 'confirmed');
+                                            onOpenChange(false);
+                                        }
+                                    }}
+                                    className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded shadow-sm text-sm"
+                                >
+                                    Zahlungseingang bestätigen
+                                </button>
+                            )}
+
+                            {booking.status !== 'cancelled' && (
+                                <button
+                                    onClick={() => {
+                                        onCancel(booking.id);
+                                        onOpenChange(false);
+                                    }}
+                                    className="text-orange-600 hover:text-orange-900 text-sm font-medium px-4 py-2 border border-orange-200 rounded hover:bg-orange-50"
+                                >
+                                    Stornieren
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             </DialogContent>

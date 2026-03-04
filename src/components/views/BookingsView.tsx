@@ -5,6 +5,7 @@ import { RequestWorkflowSimulator } from '../RequestWorkflowSimulator';
 import { ManualBookingForm } from '../ManualBookingForm';
 import { AvailabilityCheck } from '../AvailabilityCheck';
 import { BookingDetailDialog } from '../BookingDetailDialog';
+import { OfferPreview } from '../OfferPreview';
 import { checkAvailability } from '../../utils/occupancy';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '../ui/Dialog';
 
@@ -16,6 +17,7 @@ interface BookingsViewProps {
     onBookingCreated: (booking: Booking) => void;
     onBookingStatusChange: (bookingId: string, status: 'reserved' | 'confirmed') => void;
     onCancelBooking: (bookingId: string) => void;
+    onDeleteBooking: (bookingId: string) => void;
     onSaveCustomer?: (customer: Customer) => void;
 }
 
@@ -27,9 +29,16 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
     onBookingCreated,
     onBookingStatusChange,
     onCancelBooking,
+    onDeleteBooking,
     onSaveCustomer
 }) => {
+    // ... (state remains the same)
+
+    // ... (rest of the component)
+
+
     const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+    const [offerBooking, setOfferBooking] = useState<Booking | null>(null);
     const [availabilityResult, setAvailabilityResult] = useState<ReturnType<typeof checkAvailability> | null>(null);
     const [availabilityDialogOpen, setAvailabilityDialogOpen] = useState(false);
 
@@ -227,7 +236,21 @@ export const BookingsView: React.FC<BookingsViewProps> = ({
                 locations={locations}
                 onStatusChange={onBookingStatusChange}
                 onCancel={onCancelBooking}
+                onDelete={onDeleteBooking}
+                onShowOffer={() => setOfferBooking(selectedBooking)}
             />
+
+            {offerBooking && (
+                <OfferPreview
+                    booking={offerBooking}
+                    locations={locations}
+                    open={!!offerBooking}
+                    onOpenChange={(open) => !open && setOfferBooking(null)}
+                    onSendOffer={() => {
+                        alert('Funktion "Senden" ist noch nicht implementiert (Mock)');
+                    }}
+                />
+            )}
         </div>
     );
 };
